@@ -1,0 +1,4 @@
+name = Sudent registration
+description = Student registration
+core = 7.x
+stylesheets[all][] = registration.css

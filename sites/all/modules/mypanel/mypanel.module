@@ -1,0 +1,6 @@
+<?php
+function mypanel_ctools_plugin_api($module, $api) {
+    if ($module == "ctools_custom_content" && $api == "ctools_content") {
+      return array("version" => "1");
+    }
+}

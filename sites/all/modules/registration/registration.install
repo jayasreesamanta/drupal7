@@ -1,0 +1,100 @@
+
+<?php
+/**
+* @file
+* Module for managing links of social networking sites.
+*/
+
+
+# /**
+# * Implementation of hook_install().
+# */
+# function registration_install() {
+# // Use schema API to create database table.
+# drupal_install_schema('registration');
+# }
+
+
+
+# /**
+# * Implementation of hook_uninstall().
+# */
+# function registration_uninstall() {
+# // Remove tables.
+# drupal_uninstall_schema('registration');
+# }
+
+
+
+/**
+* Implementation of hook_schema().
+*/
+function registration_schema() {
+    $schema['registration_form'] = array(
+        'description' => t('Stores registered users data'),
+        'fields' => array(
+            'sid' => array(
+                'type' => 'serial', 
+                'unsigned' => TRUE, 
+                'size' => 'small',
+                'not null' => TRUE),
+            'name' => array(
+                'type' => 'text', 
+                'size' => 'small',
+                'not null' => TRUE),
+            'mother_name' => array(
+                'type' => 'text', 
+                'size' => 'small',
+                'not null' => TRUE),
+            'father_name' => array(
+                'type' => 'text', 
+                'size' => 'small',
+                'not null' => TRUE),
+            'gender' => array(
+                'type' => 'varchar',
+                'length' => 10,
+                'not null' => TRUE),
+            'steam' => array(
+                'type' => 'varchar',
+                'length' => 20,
+                'not null' => TRUE),
+            'address' => array(
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE),
+            'email' => array(
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE),
+            'mobile' => array(
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE),
+            'profilepic' => array(
+                'type' => 'varchar',
+                'length' => 25,
+                'not null' => FALSE),
+        ),
+        'primary key' => array('sid'),   
+    );
+    return $schema;
+}
+
+function registration_uninstall() {
+    $table_name = 'registration_form';
+    if (db_table_exists($table_name)) {
+      db_drop_table($table_name);
+    }
+}
+/**
+ * Add newcol field to {registration_form} table.
+ */
+function registration_update_7103() {
+  $subscription = array(
+    'type' => 'varchar',
+    'description' => "Subscription",
+    'length' => 200,
+    'not null' => FALSE,
+  ); 
+  db_add_field('registration_form', 'subscription', $subscription);
+}

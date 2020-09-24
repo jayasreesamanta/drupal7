@@ -1,0 +1,367 @@
+<?php
+function registration_menu() {
+  $items = array();
+  $items['registration'] = array( 
+    'title' => 'Registration',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['registration/registration-form/add'] = array( 
+    'title' => 'Registration Form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_form'),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['registration/registration-form/%/edit'] = array( 
+    'title' => 'Registration Form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_form' , 2),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['registration/registration-form/%/delete'] = array( 
+    'title' => 'Registration Form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_form_delete_confirm' , 2),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['registration/registration-list'] = array( 
+    'title' => 'Registration list',
+    'page callback' => 'registration_list_data',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['student/%'] = array( 
+    'title' => 'Student Detail page',
+    'page callback' => 'student_detail',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'page arguments' => array(1),  
+  );
+  return $items;
+}
+
+function registration_form($form, &$form_state) {
+  $name = $mothername = $fathername = $address = $gender = $department = $email = $mobile = $subscription= '';
+  if(arg(2) && is_numeric(arg(2))) {
+    $sid = arg(2);
+    $results = db_select('registration_form', 'nf')
+      ->fields('nf')
+      ->condition('sid', $sid, '=')
+      ->execute()
+      ->fetchAssoc();
+    if (!empty($results)){
+      $name = $results['name'];
+      $mothername = $results['mother_name'];
+      $fathername = $results['father_name'];
+      $address = $results['address'];
+      $gender = $results['gender'];
+      $department = $results['steam'];
+      $email = $results['email'];
+      $mobile = $results['mobile'];
+    }
+    
+  }
+  /** 
+   *Create registration form
+   */
+
+  $form['#attributes']['enctype'] = "multipart/form-data";
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Full name'),
+    '#size' => 50,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+    '#default_value' => $name,
+  );
+  $form['father_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Father name'),
+    '#size' => 50,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+    '#default_value' => $fathername,
+  ); 
+  $form['mother_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Mother name'),
+    '#size' => 50,
+    '#maxlength' => 20,
+    '#required' => TRUE,
+    '#default_value' => $mothername,
+  ); 
+  $form['address'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Address'),
+    '#required' => TRUE,
+    '#default_value' => $address,
+  ); 
+  $form['gender'] = array(
+    '#type' => 'radios',
+    '#title' => t('Gender'),
+    '#options' => array(
+        'male'=>t('Male'),
+        'female'=>t('Female'),
+        'other'=>t('Other')),
+    '#default_value' => $gender,
+  );
+  $form['department'] = array(
+    '#type' => 'select',
+    '#title' => t('Department'),
+    '#options' => array(
+        ''=> t('---Select---'),
+        'mca'=>t('MCA'),
+        'bca'=>t('BCA'),
+        'mba'=>t('MBA'),
+        'bba'=>t('BBA')),
+    '#required' => TRUE,
+    '#default_value' => $department,
+  );
+  $form['email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Email'),
+    '#size' => 50,
+    '#maxlength' => 50,
+    '#required' => TRUE,
+    '#default_value' => $email,
+  );
+  $form['mobile'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array(
+      'data-type' => 'number',
+    ),
+    '#title' => t('Mobile'),
+    '#maxlength' => 11,
+    '#required' => TRUE,
+    '#default_value' => $mobile,
+  );
+  if(!arg(2) || !is_numeric(arg(2))) {
+    $form['subscription'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Subject subsccription'),
+      '#options' => array(
+        'math'=>t('Math'),
+        'ds'=>t('Data structur'),
+        'os'=>t('Operating system')),
+    ); 
+  }
+  $form['image'] = array(
+    '#title' => t('Upload an image that shows off your business.'),
+    '#type' => 'managed_file',
+    '#description' => t('Max size of 3Mb and filetype of jpg jpeg or png'),
+    '#upload_location' => 'public://image/',
+    '#upload_validators' => array(
+    'file_validate_extensions' => array('png jpg jpeg'),
+    'file_validate_size' => array(3*1024*1024),
+    ),
+  );
+  $form['submit_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  return $form;
+}
+
+function registration_form_validate($form, &$form_state) {
+  $valid_mobile = $form_state['values']['mobile'];
+  $valid_email = $form_state['values']['email'];
+  if(!is_numeric($valid_mobile) || strlen($valid_mobile) != 10) {
+    form_set_error('mobile', t('Mobile number should contain 10 odigits'));
+  }
+  if (!valid_email_address($valid_email)) {
+    form_set_error('email', 'Sorry. Your email address,' . $valid_email . ', is not valid. Please submit a valid E-mail address.');
+  }  
+  if (arg(2) && is_numeric(arg(2))) {
+    $result = db_select('registration_form', 'nf')
+      ->fields('nf', array('email'))
+      ->condition('sid', arg(2), '!=')
+      ->execute()
+      ->fetchAll();
+    foreach($result as $key){
+      if($valid_email == $key->email){
+        form_set_error('email', 'Sorry. Your email address,' . $valid_email . ', is already registered');
+      }  
+    }
+  }else{
+    $result = db_select('registration_form', 'nf')
+      ->fields('nf', array('email'))
+      ->execute()
+      ->fetchAll();
+    foreach($result as $key){
+      if($valid_email == $key->email){
+        form_set_error('email', 'Sorry. Your email address,' . $valid_email . ', is already registered');
+      }  
+    }
+  }      
+}
+
+function registration_form_submit($form, &$form_state) {
+  
+  if (arg(2) && is_numeric(arg(2))) {
+    $result = db_select('registration_form', 'nf')
+      ->fields('nf', array('profilepic'))
+      ->condition('sid', arg(2), '=')
+      ->execute()
+      ->fetchAssoc();
+    if(empty($form_state['values']['image'])){
+      $fid = $result['profilepic'];
+    }
+    else{
+      $image = $form_state['values']['image'];
+      $file = file_load($image);
+      $fid = $file->fid;
+    }
+    db_update('registration_form')
+      ->fields(array(
+        'name' => $form_state['values']['name'],
+        'mother_name' => $form_state['values']['mother_name'],
+        'father_name' => $form_state['values']['father_name'],
+        'gender' => $form_state['values']['gender'],
+        'steam' => $form_state['values']['department'],
+        'address' => $form_state['values']['address'],
+        'email' => $form_state['values']['email'],
+        'mobile' => $form_state['values']['mobile'],
+        'profilepic' => $fid,
+    ))
+    ->condition('sid', arg(2), '=')
+    ->execute();
+    drupal_set_message("Registration successful ");
+  }
+  else {
+    if(!empty($form_state['values']['image'])){
+      $image = $form_state['values']['image'];
+      $file = file_load($image);
+      $fid = $file ->fid;
+    }
+    else{
+      $fid = "";
+    }
+    if(!empty($form_state['values']['subscription'])){
+      $subscription = $form_state['values']['subscription'];
+      $subscription = implode(" ",$subscription);
+      $subscription = str_replace(0,"",$subscription);
+    }
+    else{
+      $subscription = "";
+    }
+    db_insert('registration_form')
+      ->fields(array(
+        'name' => $form_state['values']['name'],
+        'mother_name' => $form_state['values']['mother_name'],
+        'father_name' => $form_state['values']['father_name'],
+        'gender' => $form_state['values']['gender'],
+        'steam' => $form_state['values']['department'],
+        'address' => $form_state['values']['address'],
+        'email' => $form_state['values']['email'],
+        'mobile' => $form_state['values']['mobile'],
+        'subscription' => $subscription,
+        'profilepic' => $file ->fid,
+    ))->execute();
+    drupal_set_message("Registration successful "); 
+  }    
+}
+
+/**
+* Function to fetch all record
+*/
+
+function registration_list_data(){
+  $query = db_select('registration_form', 'nf')
+    ->fields('nf', array('sid', 'name', 'steam', 'email', 'mobile', 'profilepic'))
+	  ->execute()
+    ->fetchAll();
+  
+  $rows = array();
+  foreach($query as $key){
+    $rows[] = [
+        'sid' => $key->sid,
+        'name' => $key->name,
+        'steam' => $key->steam,
+        'email' => $key->email,
+        'mobile' => $key->mobile,
+        'image' => $key->profilepic,
+        'operation' => l(t('Edit'), 'registration/registration-form/' . $key->sid . '/edit') . ' ' . 
+        l(t('Delete'), 'registration/registration-form/' . $key->sid . '/delete')
+    ];  
+  }
+  $variables =  array(
+    'element' => $rows
+  );
+  $output = theme('registration_list',$variables);
+  return $output;
+}
+
+/**
+* Delete conformation method
+*/
+
+function registration_form_delete_confirm($form ,&$form_state, $sid) {
+  $form['student_id'] = array(
+      '#type' => 'value',
+      '#value' => $sid,
+  );     
+  drupal_set_message($sid);    
+  return confirm_form($form,t('Are you sure you want to delete '.$sid.' Student?'),
+    isset($_GET['destination']) ? $_GET['destination'] : "registration/registration-list", t('This action cannot be undone.'),t('Delete'),t('Cancel'));
+}
+
+/**
+* Delete conformation submit method
+*/
+
+function registration_form_delete_confirm_submit($form, &$form_state) {
+	$form_values = $form_state['values'];
+  if ($form_state['values']['confirm']) {
+  $sid = $form_state['values']['student_id'];
+  drupal_set_message(t('Student ' .$sid.' will get deleted.'));
+                              
+  $result = db_query("DELETE FROM {registration_form} where sid='{$sid}'");
+  drupal_set_message(t('Student has been deleted successfully.'));
+  }
+  drupal_goto("registration/registration-list");
+}
+
+/**
+* Adding student details page
+*/
+
+function student_detail(){
+  if (arg(1) && is_numeric(arg(1))) {
+      $result = db_select('registration_form', 'nf')
+          ->fields('nf')
+          ->condition('sid', arg(1), '=')
+          ->execute()
+          ->fetchAssoc();
+  }       
+  $variables =  array(
+    'element' => $result,
+  );
+  $output = theme('student_detail',$variables);
+  return $output;
+}
+
+/**
+*impleamenting hook_theme
+*/
+
+function registration_theme() {
+  return array(
+    'registration_list' => array(
+      'template' => 'registration-list-template',
+      'path' => drupal_get_path('module', 'registration'),
+      'render element' => 'element',
+     ),
+     'student_detail' => array(
+        'template' => 'student-detail-template',
+        'path' => drupal_get_path('module', 'registration'),
+        'render element' => 'element',
+     ),
+  );
+}
+
+
+
+?>
